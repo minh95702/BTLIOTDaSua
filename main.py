@@ -4,8 +4,13 @@ app = Flask(__name__)
 
 door_command = "NONE"
 
+SECRET_TOKEN = "minhdoorsecure2025"
+
 @app.route('/')
 def home():
+    token = request.args.get("token", "")
+    if token != SECRET_TOKEN:
+        return "❌ Truy cập bị từ chối. Bạn chưa được xác thực.", 403
     return render_template('dieukhiencua.html')
 
 @app.route('/door_control', methods=['POST'])
@@ -30,6 +35,4 @@ def get_command():
     return cmd
 
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))  # Render sẽ tự thay PORT khi deploy
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
