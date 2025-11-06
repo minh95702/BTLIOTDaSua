@@ -1,21 +1,17 @@
 from flask import Flask, render_template, request, jsonify
-import time
+import time, os
 
 app = Flask(__name__)
 
 door_command = "NONE"
 
-# 🔐 Token động (sẽ được set mỗi phiên bởi chương trình nhận diện)
+# 🔐 Token động (được đặt bởi chương trình nhận diện)
 SECRET_TOKEN = None
 TOKEN_EXPIRE = 0  # thời điểm hết hạn token
 
-# ========== API: NHẬN TOKEN MỚI TỪ CLIENT ========== #
+# ========== API: Client đặt token ==========
 @app.route('/set_token', methods=['POST'])
 def set_token():
-    """
-    Client (chương trình nhận diện khuôn mặt) sẽ gọi POST /set_token 
-    kèm token ngẫu nhiên. Server lưu token này trong 5 phút.
-    """
     global SECRET_TOKEN, TOKEN_EXPIRE
     data = request.get_json()
     token = data.get("token", "")
@@ -23,18 +19,17 @@ def set_token():
         return jsonify({"error": "Thiếu token!"}), 400
 
     SECRET_TOKEN = token
-    TOKEN_EXPIRE = time.time() + 300  # token sống 5 phút
+    TOKEN_EXPIRE = time.time() + 300  # sống 5 phút
     print(f"🔑 Đã nhận token mới: {SECRET_TOKEN[:8]}... (hết hạn sau 5 phút)")
     return jsonify({"message": "Token đã cập nhật thành công!"})
 
 
-# ========== TRANG CHÍNH: GIAO DIỆN ĐIỀU KHIỂN ========== #
+# ========== Giao diện điều khiển ==========
 @app.route('/')
 def home():
     global SECRET_TOKEN, TOKEN_EXPIRE
     token = request.args.get("token", "")
 
-    # Kiểm tra hợp lệ
     if not SECRET_TOKEN or time.time() > TOKEN_EXPIRE:
         return "❌ Token hết hạn hoặc chưa được thiết lập. Vui lòng xác thực lại.", 403
     if token != SECRET_TOKEN:
@@ -43,7 +38,7 @@ def home():
     return render_template('dieukhiencua.html')
 
 
-# ========== API: ĐIỀU KHIỂN CỬA ========== #
+# ========== API: Điều khiển cửa ==========
 @app.route('/door_control', methods=['POST'])
 def door_control():
     global door_command
@@ -60,7 +55,7 @@ def door_control():
         return "⚠️ Lệnh không hợp lệ.", 400
 
 
-# ========== API: THIẾT BỊ ESP32 LẤY LỆNH MỚI NHẤT ========== #
+# ========== API: ESP32 lấy lệnh ==========
 @app.route('/get_command', methods=['GET'])
 def get_command():
     global door_command
@@ -69,6 +64,7 @@ def get_command():
     return cmd
 
 
-# ========== MAIN ========== #
+# ========== Chạy ứng dụng ==========
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # Render tự cấp PORT
+    app.run(host="0.0.0.0", port=port)
