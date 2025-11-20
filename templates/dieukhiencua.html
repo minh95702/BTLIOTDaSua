@@ -4,40 +4,111 @@
     <meta charset="UTF-8">
     <title>Điều khiển cửa</title>
     <style>
-        body { font-family: Arial; text-align: center; background-color: #f8f9fa; }
-        h2 { margin-top: 40px; color: #333; }
+        body { font-family: Arial; background-color: #f8f9fa; }
+        h2 { text-align: center; margin-top: 30px; }
         button {
             font-size: 20px;
             padding: 15px 40px;
-            margin: 25px;
+            margin: 20px;
             border: none;
             border-radius: 10px;
-            color: white;
             cursor: pointer;
+            color: white;
         }
-        #open { background-color: #28a745; }
-        #open:hover { background-color: #218838; }
-        #close { background-color: #dc3545; }
-        #close:hover { background-color: #c82333; }
-        a { display: block; margin-top: 30px; text-decoration: none; color: #007bff; }
+        #open { background: #28a745; }
+        #close { background: #dc3545; }
+
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        th { background: #007bff; color: white; }
+
+        .filter-box {
+            width: 90%;
+            margin: 20px auto;
+            display: flex;
+            gap: 10px;
+        }
+        input, select { padding: 8px; flex: 1; }
     </style>
 </head>
 <body>
-    <h2>Điều khiển cửa</h2>
-    <button id="open" onclick="sendCommand('open')">Mở cửa</button>
-    <button id="close" onclick="sendCommand('close')">Đóng cửa</button>
-    <a href="/">⬅ Quay lại trang chính</a>
 
-    <script>
-        async function sendCommand(cmd) {
-            const res = await fetch('/door_control', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ command: cmd })
-            });
-            const data = await res.text();
-            alert(data);
-        }
-    </script>
+    <h2>Điều khiển cửa</h2>
+    <div style="text-align:center;">
+        <button id="open" onclick="sendCmd('open')">MỞ CỬA</button>
+        <button id="close" onclick="sendCmd('close')">ĐÓNG CỬA</button>
+    </div>
+
+    <h2>Lịch sử hoạt động</h2>
+    <div class="filter-box">
+        <input id="filterUser" type="text" placeholder="Lọc theo tên">
+        <select id="filterAction">
+            <option value="">Tất cả hành động</option>
+            <option value="MỞ cửa">MỞ cửa</option>
+            <option value="ĐÓNG cửa">ĐÓNG cửa</option>
+        </select>
+        <button onclick="loadLogs()">Lọc</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Hành động</th>
+                <th>Thời gian</th>
+            </tr>
+        </thead>
+        <tbody id="logTable"></tbody>
+    </table>
+
+<script>
+async function sendCmd(cmd) {
+    let token = new URLSearchParams(window.location.search).get("token");
+    let res = await fetch("/door_control", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({command: cmd})
+    });
+    alert(await res.text());
+    loadLogs();
+}
+
+async function loadLogs() {
+    let token = new URLSearchParams(window.location.search).get("token");
+    let res = await fetch(`/logs?token=${token}`);
+    let data = await res.json();
+
+    let userFilter = document.getElementById("filterUser").value.toLowerCase();
+    let actionFilter = document.getElementById("filterAction").value;
+
+    let tbody = document.getElementById("logTable");
+    tbody.innerHTML = "";
+
+    data.filter(row => 
+        (userFilter === "" || row.user_id.toLowerCase().includes(userFilter)) &&
+        (actionFilter === "" || row.action === actionFilter)
+    )
+    .forEach(row => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.user_id}</td>
+                <td>${row.action}</td>
+                <td>${row.time}</td>
+            </tr>`;
+    });
+}
+
+loadLogs();
+</script>
+
 </body>
 </html>
