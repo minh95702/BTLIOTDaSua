@@ -7,23 +7,53 @@ door_command = "NONE"
 SECRET_TOKEN = None
 TOKEN_EXPIRE = 0  
 CURRENT_USER = None
-LOG_FILE = "door_logs.json"
 
-# Tạo file log nếu chưa có
+LOG_FILE = "door_logs.json"
+DASHBOARD_FILE = "dashboard_data.json"
+
+# ================= TẠO FILE LOG =================
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump([], f, ensure_ascii=False, indent=4)
 
+# ================= TẠO FILE DASHBOARD =================
+if not os.path.exists(DASHBOARD_FILE):
+    with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
+        json.dump({
+            "door_state": "NONE",
+            "open_count": 0,
+            "close_count": 0
+        }, f, ensure_ascii=False, indent=4)
+
+# ================= LƯU LOG =================
 def save_log(user_id, action):
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         logs = json.load(f)
+
     logs.append({
         "user_id": user_id,
         "action": action,
         "time": time.strftime("%Y-%m-%d %H:%M:%S")
     })
+
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(logs, f, ensure_ascii=False, indent=4)
+
+# ================= LƯU DASHBOARD =================
+def update_dashboard(state):
+    with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
+        dash = json.load(f)
+
+    dash["door_state"] = state
+
+    if state == "OPEN":
+        dash["open_count"] += 1
+    elif state == "CLOSE":
+        dash["close_count"] += 1
+
+    with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
+        json.dump(dash, f, ensure_ascii=False, indent=4)
+
 
 # ========== API nhận token + user_id ==========
 @app.route('/set_token', methods=['POST'])
@@ -39,8 +69,10 @@ def set_token():
     SECRET_TOKEN = token
     TOKEN_EXPIRE = time.time() + 300
     CURRENT_USER = user_id
+
     print(f"🔑 Nhận token mới từ user '{user_id}': {SECRET_TOKEN[:8]}...")
     return jsonify({"message": "Token + user_id đã cập nhật thành công!"})
+
 
 # ========== Giao diện điều khiển ==========
 @app.route('/')
@@ -52,6 +84,7 @@ def home():
         return "❌ Token không hợp lệ.", 403
     return render_template('dieukhiencua.html')
 
+
 # ========== API điều khiển cửa ==========
 @app.route('/door_control', methods=['POST'])
 def door_control():
@@ -62,13 +95,17 @@ def door_control():
     if cmd in ['open', '1', 'on', 'mo', 'mở']:
         door_command = "OPEN"
         save_log(CURRENT_USER, "MỞ cửa")
+        update_dashboard("OPEN")
         return "✅ Lệnh MỞ cửa đã gửi!"
+
     elif cmd in ['close', '0', 'off', 'dong', 'đóng']:
         door_command = "CLOSE"
         save_log(CURRENT_USER, "ĐÓNG cửa")
+        update_dashboard("CLOSE")
         return "✅ Lệnh ĐÓNG cửa đã gửi!"
-    else:
-        return "⚠️ Lệnh không hợp lệ.", 400
+
+    return "⚠️ Lệnh không hợp lệ.", 400
+
 
 # ========== API ESP32 lấy lệnh ==========
 @app.route('/get_command', methods=['GET'])
@@ -77,6 +114,7 @@ def get_command():
     cmd = door_command
     door_command = "NONE"
     return cmd
+
 
 # ========== API lấy log ==========
 @app.route('/logs', methods=['GET'])
@@ -87,6 +125,19 @@ def logs():
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         logs = json.load(f)
     return jsonify(logs)
+
+
+# ========== API cho dashboard ==========
+@app.route('/dashboard_data', methods=['GET'])
+def dashboard_data():
+    token = request.args.get("token", "")
+    if token != SECRET_TOKEN:
+        return "❌ Token không hợp lệ.", 403
+
+    with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return jsonify(data)
+
 
 # ========== Chạy server ==========
 if __name__ == "__main__":
