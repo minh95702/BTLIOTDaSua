@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import time, os, json
-from datetime import datetime
+from datetime import datetime,timezone,timedelta
 
 app = Flask(__name__)
 
@@ -10,21 +10,31 @@ TOKEN_EXPIRE = 0
 CURRENT_USER = None
 LOG_FILE = "door_logs.json"
 
+# try sử dụng zoneinfo (chuẩn từ Python 3.9+). Nếu không có, fallback về UTC+7.
+try:
+    from zoneinfo import ZoneInfo
+    VN_TZ = ZoneInfo("Asia/Bangkok")
+except Exception:
+    VN_TZ = timezone(timedelta(hours=7))
+
 # Tạo file log nếu chưa có
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump([], f, ensure_ascii=False, indent=4)
 
 def save_log(user_id, action):
+    # đọc file
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         logs = json.load(f)
 
+    # thêm bản ghi với timezone rõ ràng cho Việt Nam
     logs.append({
         "user_id": user_id,
         "action": action,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Giờ máy bạn
+        "time": datetime.now(tz=VN_TZ).strftime("%Y-%m-%d %H:%M:%S")
     })
 
+    # ghi lại file
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(logs, f, ensure_ascii=False, indent=4)
 
