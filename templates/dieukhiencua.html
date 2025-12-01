@@ -19,7 +19,7 @@
         #close { background: #dc3545; }
 
         table {
-            width: 90%;
+            width: 95%;
             margin: 20px auto;
             border-collapse: collapse;
             background: white;
@@ -32,7 +32,7 @@
         th { background: #007bff; color: white; }
 
         .filter-box {
-            width: 90%;
+            width: 95%;
             margin: 20px auto;
             display: flex;
             gap: 10px;
@@ -66,6 +66,11 @@
             <option value="MỞ cửa">MỞ cửa</option>
             <option value="ĐÓNG cửa">ĐÓNG cửa</option>
         </select>
+        <select id="filterSource">
+            <option value="">Tất cả nguồn</option>
+            <option value="web">Web</option>
+            <option value="ai">AI client</option>
+        </select>
         <button onclick="loadLogs()">Lọc</button>
     </div>
 
@@ -75,6 +80,7 @@
                 <th>User</th>
                 <th>Hành động</th>
                 <th>Thời gian</th>
+                <th>Nguồn</th>
             </tr>
         </thead>
         <tbody id="logTable"></tbody>
@@ -86,7 +92,7 @@ async function sendCmd(cmd) {
     let res = await fetch("/door_control", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({command: cmd})
+        body: JSON.stringify({command: cmd, source: "web"})
     });
     alert(await res.text());
     loadLogs();
@@ -99,13 +105,15 @@ async function loadLogs() {
 
     let userFilter = document.getElementById("filterUser").value.toLowerCase();
     let actionFilter = document.getElementById("filterAction").value;
+    let sourceFilter = document.getElementById("filterSource").value;
 
     let tbody = document.getElementById("logTable");
     tbody.innerHTML = "";
 
     data.filter(row => 
         (userFilter === "" || row.user_id.toLowerCase().includes(userFilter)) &&
-        (actionFilter === "" || row.action === actionFilter)
+        (actionFilter === "" || row.action === actionFilter) &&
+        (sourceFilter === "" || row.source === sourceFilter)
     )
     .forEach(row => {
         tbody.innerHTML += `
@@ -113,10 +121,12 @@ async function loadLogs() {
                 <td>${row.user_id}</td>
                 <td>${row.action}</td>
                 <td>${row.time}</td>
+                <td>${row.source}</td>
             </tr>`;
     });
 }
 
+// Load log lúc mở trang
 loadLogs();
 </script>
 
