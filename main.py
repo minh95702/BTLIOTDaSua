@@ -10,31 +10,22 @@ TOKEN_EXPIRE = 0
 CURRENT_USER = None
 LOG_FILE = "door_logs.json"
 
-# try sử dụng zoneinfo (chuẩn từ Python 3.9+). Nếu không có, fallback về UTC+7.
-try:
-    from zoneinfo import ZoneInfo
-    VN_TZ = ZoneInfo("Asia/Bangkok")
-except Exception:
-    VN_TZ = timezone(timedelta(hours=7))
-
-# Tạo file log nếu chưa có
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump([], f, ensure_ascii=False, indent=4)
 
 def save_log(user_id, action):
-    # đọc file
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         logs = json.load(f)
 
-    # thêm bản ghi với timezone rõ ràng cho Việt Nam
+    vn_time = datetime.now() + timedelta(hours=7)  # ⏰ cộng thêm 7 giờ
+
     logs.append({
         "user_id": user_id,
         "action": action,
-        "time": datetime.now(tz=VN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+        "time": vn_time.strftime("%Y-%m-%d %H:%M:%S")
     })
 
-    # ghi lại file
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(logs, f, ensure_ascii=False, indent=4)
 
